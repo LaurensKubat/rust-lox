@@ -165,7 +165,13 @@ impl<'a> Scanner<'a> {
             ),
             '"' => self.string(),
             '\0' => Token::new(TokenType::Eof, "".to_string(), None, self.line),
-            _ => self.error_token(format!("unexpected character '{}' ", c).parse().unwrap()),
+            _ => {
+                if c.is_digit(10) {
+                    self.number()
+                } else {
+                    self.error_token(format!("unexpected character '{}' ", c).parse().unwrap())
+                }
+            },
         }
     }
 
@@ -190,6 +196,28 @@ impl<'a> Scanner<'a> {
                 }
                 _ => return,
             }
+        }
+    }
+
+    fn number(&mut self) -> Token {
+        while self.peek().is_digit(10) {
+            self.advance();
+        }
+
+        if self.peek() == '.' && self.peek_next().is_digit(10) {
+            // consume the dot in our number
+            self.advance();
+        }
+
+        while self.peek().is_digit(10) {
+            self.advance();
+        }
+
+        Token{
+            kind: TokenType::Number,
+            lexeme:  self.source[self.start..self.current].to_string(),
+            literal: None,
+            line: 0
         }
     }
 
@@ -318,6 +346,28 @@ mod tests {
                 token.lexeme
             );
         }
+    }
+
+    #[test]
+    fn scanner_scans_numbers() {
+        let source = "123.123";
+        let mut scanner = Scanner::new(source);
+
+        let expected = vec![TokenType::Number, TokenType::Eof];
+        for (i, token) in scanner.tokens.iter().enumerate() {
+            if token.kind == TokenType::Number {
+                assert_eq!(token.literal.clone().unwrap(), "123.123")
+            }
+            assert_eq!(
+                token.clone().kind,
+                expected[i],
+                "Did not find expected {:?}; {:?} was found with lexeme {}",
+                expected[i],
+                token.kind,
+                token.lexeme
+            );
+        }
+
     }
 
     #[test]
