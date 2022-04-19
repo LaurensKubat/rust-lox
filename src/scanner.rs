@@ -48,6 +48,8 @@ impl<'a> Scanner<'a> {
 
     fn scan_token(&mut self) -> Token {
         self.skip_whitespace();
+        // set the start to the start of the token
+        self.start = self.current;
         let c = self.advance();
         // TODO refactor the Token::new part to look nicer
         match c {
@@ -161,8 +163,9 @@ impl<'a> Scanner<'a> {
                 None,
                 self.line,
             ),
+            '"' => self.string(),
             '\0' => Token::new(TokenType::Eof, "".to_string(), None, self.line),
-            _ => self.error_token(format!("unexpected character '{}'", c).parse().unwrap()),
+            _ => self.error_token(format!("unexpected character '{}' ", c).parse().unwrap()),
         }
     }
 
@@ -188,6 +191,33 @@ impl<'a> Scanner<'a> {
                 _ => return,
             }
         }
+    }
+
+    fn string(&mut self) -> Token {
+        while self.peek() != '"' || self.is_at_end() {
+            if self.peek() == '\n' {
+                self.line += 1;
+            }
+            self.advance();
+        }
+
+        if self.is_at_end() {
+            return Token::new(
+                TokenType::Error,
+                "unterminated string".to_string(),
+                None,
+                self.line,
+            );
+        }
+        self.advance();
+        // The value of the string with the starting and ending '"' trimmed
+        let val = self.source[self.start + 1..self.current - 1].to_string();
+        Token::new(
+            TokenType::String,
+            self.source[self.start..self.current].to_string(),
+            Some(val),
+            self.line,
+        )
     }
 
     fn advance(&mut self) -> char {
@@ -223,7 +253,7 @@ mod tests {
 
     #[test]
     fn scanner_test() {
-        let source = "//this is a comment\n(()){}//grouping stuff\n!*+-/=<><===// operators\n{{}}";
+        let source = "//this is a comment\n(()){}//grouping stuff\n!*+-/=<><===// operators\n{{}}\"a string is here\"";
         let mut scanner = Scanner::new(source);
         scanner.scan_tokens();
 
@@ -248,17 +278,44 @@ mod tests {
             TokenType::LeftBrace,
             TokenType::RightBrace,
             TokenType::RightBrace,
+            TokenType::String,
             TokenType::Eof,
         ];
 
         assert_eq!(scanner.tokens.len(), expected.len());
         for (i, token) in scanner.tokens.iter().enumerate() {
+            if token.kind == TokenType::String {
+                assert_eq!(token.literal.clone().unwrap(), "a string is here")
+            }
             assert_eq!(
                 token.clone().kind,
                 expected[i],
                 "Did not find expected {:?}; {:?} was found",
                 expected[i],
                 token.kind
+            );
+        }
+    }
+
+    #[test]
+    fn scanner_scans_strings() {
+        let source = "\"blablathisisastring\"";
+        let mut scanner = Scanner::new(source);
+        scanner.scan_tokens();
+
+        let expected = vec![TokenType::String, TokenType::Eof];
+
+        for (i, token) in scanner.tokens.iter().enumerate() {
+            if token.kind == TokenType::String {
+                assert_eq!(token.literal.clone().unwrap(), "blablathisisastring")
+            }
+            assert_eq!(
+                token.clone().kind,
+                expected[i],
+                "Did not find expected {:?}; {:?} was found with lexeme {}",
+                expected[i],
+                token.kind,
+                token.lexeme
             );
         }
     }
@@ -284,5 +341,12 @@ mod tests {
             );
             scanner.advance();
         }
+    }
+
+    #[test]
+    fn string_stuff_works_as_expected() {
+        let raw = r#"""#;
+        let escaped = "\"";
+        assert_eq!(raw, escaped)
     }
 }
