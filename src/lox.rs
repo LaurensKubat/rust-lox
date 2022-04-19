@@ -18,7 +18,7 @@ impl Lox {
 
     pub fn run(&mut self, source: &str) {
         let mut scanner = Scanner::new(source);
-        let tokens = scanner.scan_tokens();
+        let _tokens = scanner.scan_tokens();
         // let parser = Parser::new(tokens);
         // let statements = parser.parse();
         //
