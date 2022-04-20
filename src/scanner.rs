@@ -199,6 +199,9 @@ impl<'a> Scanner<'a> {
         }
     }
 
+    // number parses a number and saves that as a string, we delay the parsing of the number
+    // to a float until later. We could already do it here, but choose not to so we can keep the
+    // type of Lexeme a String instead of making it an enum of String | float64 | none
     fn number(&mut self) -> Token {
         while self.peek().is_digit(10) {
             self.advance();
