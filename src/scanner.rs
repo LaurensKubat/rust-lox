@@ -1,5 +1,8 @@
 use crate::token::Token;
 use crate::tokentype::TokenType;
+use crate::tokentype::TokenType::Identifier;
+use phf;
+use std::collections::HashMap;
 
 pub(crate) struct Scanner<'a> {
     source: &'a str,
@@ -168,10 +171,12 @@ impl<'a> Scanner<'a> {
             _ => {
                 if c.is_digit(10) {
                     self.number()
+                } else if c.is_alphabetic() {
+                    self.identifier()
                 } else {
                     self.error_token(format!("unexpected character '{}' ", c).parse().unwrap())
                 }
-            },
+            }
         }
     }
 
@@ -199,6 +204,34 @@ impl<'a> Scanner<'a> {
         }
     }
 
+    fn identifier(&mut self) -> Token {
+        // iterate over the entire keyword
+        while self.peek().is_alphabetic() {
+            self.advance();
+        }
+        // check if the word matches any of our keywords
+        let text = self.source[self.start..self.current].to_string();
+        let token_type = KEYWORDS
+            .get(&text)
+            .unwrap_or(&TokenType::Identifier)
+            .clone();
+        if token_type == Identifier {
+            Token {
+                kind: token_type,
+                lexeme: text,
+                literal: None,
+                line: self.line,
+            }
+        } else {
+            Token {
+                kind: token_type,
+                lexeme: "".to_string(),
+                literal: None,
+                line: self.line,
+            }
+        }
+    }
+
     // number parses a number and saves that as a string, we delay the parsing of the number
     // to a float until later. We could already do it here, but choose not to so we can keep the
     // type of Lexeme a String instead of making it an enum of String | float64 | none
@@ -216,11 +249,11 @@ impl<'a> Scanner<'a> {
             self.advance();
         }
 
-        Token{
+        Token {
             kind: TokenType::Number,
-            lexeme:  self.source[self.start..self.current].to_string(),
+            lexeme: self.source[self.start..self.current].to_string(),
             literal: None,
-            line: 0
+            line: 0,
         }
     }
 
@@ -278,6 +311,25 @@ impl<'a> Scanner<'a> {
     }
 }
 
+static KEYWORDS: phf::Map<&'static str, TokenType> = phf::phf_map! {
+    "and" => TokenType::And,
+    "class" => TokenType::Class,
+    "else" => TokenType::Else,
+    "false" => TokenType::False,
+    "fun" => TokenType::Fun,
+    "for" => TokenType::For,
+    "if" => TokenType::If,
+    "nil" => TokenType::Nil,
+    "or" => TokenType::Or,
+    "print" => TokenType::Print,
+    "return" => TokenType::Return,
+    "super" => TokenType::Super,
+    "this" => TokenType::This,
+    "true" => TokenType::True,
+    "var" => TokenType::Var,
+    "while" => TokenType::While,
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -329,6 +381,41 @@ mod tests {
     }
 
     #[test]
+    fn scanner_scans_keywords() {
+        let source = "and\nclass\nelse\nfalse\nfun\nfor\nif\nnil\nor\nprint\nreturn\nsuper\nthis\ntrue\nvar\nwhile\nrandomidentifier";
+        let mut scanner = Scanner::new(source);
+        scanner.scan_tokens();
+
+        let expected = vec![
+            TokenType::And,
+            TokenType::Class,
+            TokenType::Else,
+            TokenType::False,
+            TokenType::Fun,
+            TokenType::For,
+            TokenType::If,
+            TokenType::Nil,
+            TokenType::Or,
+            TokenType::Print,
+            TokenType::Return,
+            TokenType::Super,
+            TokenType::This,
+            TokenType::True,
+            TokenType::Var,
+            TokenType::While,
+            TokenType::Identifier,
+            TokenType::Eof
+        ];
+
+        for (i, token) in scanner.tokens.iter().enumerate() {
+            assert_eq!(token.kind, expected[i]);
+            if token.kind == TokenType::Identifier {
+                assert_eq!(token.lexeme, "randomidentifier".to_string())
+            }
+        }
+    }
+
+    #[test]
     fn scanner_scans_strings() {
         let source = "\"blablathisisastring\"";
         let mut scanner = Scanner::new(source);
@@ -370,7 +457,6 @@ mod tests {
                 token.lexeme
             );
         }
-
     }
 
     #[test]
