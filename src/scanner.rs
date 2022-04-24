@@ -262,7 +262,7 @@ mod tests {
 
     #[test]
     fn scanner_larger_test() {
-        let source = "(()){}!*+-/=<><==={{}}\"a string is here\"randomidentifier 123.123";
+        let source = "(()){}!*+-/=<><==={{}}\"a string is here\"randomidentifier 123";
         let mut scanner = Scanner::new(source);
         scanner.scan_tokens();
 
@@ -302,7 +302,7 @@ mod tests {
                     .eq(&Literal::String("a string is here".to_string())));
             }
             if token.kind == TokenType::Number {
-                assert_eq!(token.clone().literal.unwrap(), Literal::Number(123.123))
+                assert_eq!(token.clone().literal.unwrap(), Literal::Number(123 as f64))
             }
             assert_eq!(
                 token.clone().kind,
