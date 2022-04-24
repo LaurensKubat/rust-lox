@@ -49,3 +49,10 @@ pub enum TokenType {
     Eof,
     Error,
 }
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum Literal {
+    String(String),
+    Number(f64),
+    Identifier(String),
+}

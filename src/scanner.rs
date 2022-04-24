@@ -1,6 +1,6 @@
 use crate::token::Token;
-use crate::tokentype::TokenType;
-use crate::tokentype::TokenType::Identifier;
+use crate::tokentype::TokenType::{Eof, Identifier};
+use crate::tokentype::{Literal, TokenType};
 use phf;
 use std::collections::HashMap;
 
@@ -54,121 +54,56 @@ impl<'a> Scanner<'a> {
         // set the start to the start of the token
         self.start = self.current;
         let c = self.advance();
-        // TODO refactor the Token::new part to look nicer
         match c {
-            '(' => Token::new(
-                TokenType::LeftParen,
-                self.source[self.start..self.current].to_string(),
-                None,
-                self.line,
-            ),
-            ')' => Token::new(
-                TokenType::RightParen,
-                self.source[self.start..self.current].to_string(),
-                None,
-                self.line,
-            ),
-            '{' => Token::new(
-                TokenType::LeftBrace,
-                self.source[self.start..self.current].to_string(),
-                None,
-                self.line,
-            ),
-            '}' => Token::new(
-                TokenType::RightBrace,
-                self.source[self.start..self.current].to_string(),
-                None,
-                self.line,
-            ),
-            ',' => Token::new(
-                TokenType::Comma,
-                self.source[self.start..self.current].to_string(),
-                None,
-                self.line,
-            ),
-            '.' => Token::new(
-                TokenType::Dot,
-                self.source[self.start..self.current].to_string(),
-                None,
-                self.line,
-            ),
-            '-' => Token::new(
-                TokenType::Minus,
-                self.source[self.start..self.current].to_string(),
-                None,
-                self.line,
-            ),
-            '+' => Token::new(
-                TokenType::Plus,
-                self.source[self.start..self.current].to_string(),
-                None,
-                self.line,
-            ),
-            ';' => Token::new(
-                TokenType::Semicolon,
-                self.source[self.start..self.current].to_string(),
-                None,
-                self.line,
-            ),
-            '*' => Token::new(
-                TokenType::Star,
-                self.source[self.start..self.current].to_string(),
-                None,
-                self.line,
-            ),
-            '!' => Token::new(
-                if self.peek() == '=' {
-                    self.current += 1;
-                    TokenType::BangEqual
-                } else {
-                    TokenType::Bang
-                },
-                self.source[self.start..self.current].to_string(),
-                None,
-                self.line,
-            ),
-            '=' => Token::new(
-                if self.peek() == '=' {
+            '(' => self.new_token(TokenType::LeftParen, None),
+            ')' => self.new_token(TokenType::RightParen, None),
+            '{' => self.new_token(TokenType::LeftBrace, None),
+            '}' => self.new_token(TokenType::RightBrace, None),
+            ',' => self.new_token(TokenType::Comma, None),
+            '.' => self.new_token(TokenType::Dot, None),
+            '-' => self.new_token(TokenType::Minus, None),
+            '+' => self.new_token(TokenType::Plus, None),
+            ';' => self.new_token(TokenType::Semicolon, None),
+            '*' => self.new_token(TokenType::Star, None),
+            '!' =>  {let token_type = if self.peek() == '=' {
+                self.current += 1;
+                TokenType::BangEqual
+            } else {
+                TokenType::Bang
+            };
+                self.new_token(token_type, None)
+            },
+            '=' => {
+                let token_type = if self.peek() == '=' {
                     self.current += 1;
                     TokenType::EqualEqual
                 } else {
                     TokenType::Equal
-                },
-                self.source[self.start..self.current].to_string(),
-                None,
-                self.line,
-            ),
-            '<' => Token::new(
-                if self.peek() == '=' {
+                };
+                self.new_token(token_type, None)
+            }
+            '<' => {
+                let token_type = if self.peek() == '=' {
                     self.current += 1;
                     TokenType::LessEqual
                 } else {
                     TokenType::Less
-                },
-                self.source[self.start..self.current].to_string(),
-                None,
-                self.line,
-            ),
-            '>' => Token::new(
-                if self.peek() == '=' {
+                };
+                self.new_token(token_type, None)
+            }
+            '>' => {
+                let token_type = if self.peek() == '=' {
                     self.current += 1;
                     TokenType::GreaterEqual
                 } else {
                     TokenType::Greater
-                },
-                self.source[self.start..self.current].to_string(),
-                None,
-                self.line,
-            ),
-            '/' => Token::new(
-                TokenType::Slash,
-                self.source[self.start..self.current].to_string(),
-                None,
-                self.line,
-            ),
+                };
+                self.new_token(token_type, None)
+            }
+            '/' => self.new_token(TokenType::Slash, None),
             '"' => self.string(),
-            '\0' => Token::new(TokenType::Eof, "".to_string(), None, self.line),
-            _ => {
+            '\0' => self.new_eof(),
+            c => {
                 if c.is_digit(10) {
                     self.number()
                 } else if c.is_alphabetic() {
@@ -205,9 +140,9 @@ impl<'a> Scanner<'a> {
     }
 
     fn identifier(&mut self) -> Token {
-        // iterate over the entire keyword
+        // iterate over the entire keyword, by doing so, we apply maximal munch
         while self.peek().is_alphabetic() {
-            self.advance();
+            let c = self.advance();
         }
         // check if the word matches any of our keywords
         let text = self.source[self.start..self.current].to_string();
@@ -216,19 +151,10 @@ impl<'a> Scanner<'a> {
             .unwrap_or(&TokenType::Identifier)
             .clone();
         if token_type == Identifier {
-            Token {
-                kind: token_type,
-                lexeme: text,
-                literal: None,
-                line: self.line,
-            }
+            self.new_token(token_type, Some(Literal::Identifier(text)))
         } else {
-            Token {
-                kind: token_type,
-                lexeme: "".to_string(),
-                literal: None,
-                line: self.line,
-            }
+            // known keywords dont need a literal value saved since we know the literal value by the keyword
+            self.new_token(token_type, None)
         }
     }
 
@@ -249,12 +175,10 @@ impl<'a> Scanner<'a> {
             self.advance();
         }
 
-        Token {
-            kind: TokenType::Number,
-            lexeme: self.source[self.start..self.current].to_string(),
-            literal: None,
-            line: 0,
-        }
+        let val = self.source[self.start..self.current]
+            .parse::<f64>()
+            .unwrap();
+        self.new_token(TokenType::Number, Some(Literal::Number(val)))
     }
 
     fn string(&mut self) -> Token {
@@ -279,7 +203,7 @@ impl<'a> Scanner<'a> {
         Token::new(
             TokenType::String,
             self.source[self.start..self.current].to_string(),
-            Some(val),
+            Some(Literal::String(val)),
             self.line,
         )
     }
@@ -290,16 +214,18 @@ impl<'a> Scanner<'a> {
         c
     }
 
-    fn add_token(&mut self, token_type: TokenType, literal: Option<String>) {
+    fn new_token(&self, token_type: TokenType, literal: Option<Literal>) -> Token {
         let text = self.source[self.start..self.current].to_string();
-        self.tokens
-            .push(Token::new(token_type, text, literal, self.line));
+        Token::new(token_type, text, literal, self.line)
+    }
+
+    fn new_eof(&self) -> Token {
+        Token::new(TokenType::Eof, "".to_string(), None, self.line)
     }
 
     fn peek(&self) -> char {
         // If nth returns a None value, we are at the end of the source
-        let c = self.source.chars().nth(self.current).unwrap_or('\0');
-        c
+        self.source.chars().nth(self.current).unwrap_or('\0')
     }
 
     fn peek_next(&self) -> char {
@@ -368,7 +294,10 @@ mod tests {
         assert_eq!(scanner.tokens.len(), expected.len());
         for (i, token) in scanner.tokens.iter().enumerate() {
             if token.kind == TokenType::String {
-                assert_eq!(token.literal.clone().unwrap(), "a string is here")
+                assert!(token.clone()
+                    .literal
+                    .unwrap()
+                    .eq(&Literal::String("a string is here".to_string())));
             }
             assert_eq!(
                 token.clone().kind,
@@ -404,7 +333,7 @@ mod tests {
             TokenType::Var,
             TokenType::While,
             TokenType::Identifier,
-            TokenType::Eof
+            TokenType::Eof,
         ];
 
         for (i, token) in scanner.tokens.iter().enumerate() {
@@ -425,7 +354,10 @@ mod tests {
 
         for (i, token) in scanner.tokens.iter().enumerate() {
             if token.kind == TokenType::String {
-                assert_eq!(token.literal.clone().unwrap(), "blablathisisastring")
+                assert!(token.clone()
+                    .literal
+                    .unwrap()
+                    .eq(&Literal::String("blablathisisastring".to_string())));
             }
             assert_eq!(
                 token.clone().kind,
@@ -446,7 +378,7 @@ mod tests {
         let expected = vec![TokenType::Number, TokenType::Eof];
         for (i, token) in scanner.tokens.iter().enumerate() {
             if token.kind == TokenType::Number {
-                assert_eq!(token.literal.clone().unwrap(), "123.123")
+                assert!(token.clone().literal.unwrap().eq(&Literal::Number(123.123)))
             }
             assert_eq!(
                 token.clone().kind,
@@ -482,10 +414,4 @@ mod tests {
         }
     }
 
-    #[test]
-    fn string_stuff_works_as_expected() {
-        let raw = r#"""#;
-        let escaped = "\"";
-        assert_eq!(raw, escaped)
-    }
 }

@@ -1,3 +1,5 @@
+extern crate core;
+
 mod interpreter;
 mod lox;
 mod scanner;
