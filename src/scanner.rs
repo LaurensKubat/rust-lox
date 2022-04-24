@@ -261,6 +261,60 @@ mod tests {
     use super::*;
 
     #[test]
+    fn scanner_larger_test() {
+        let source = "(()){}!*+-/=<><==={{}}\"a string is here\"randomidentifier 123.123";
+        let mut scanner = Scanner::new(source);
+        scanner.scan_tokens();
+
+        let expected = vec![
+            TokenType::LeftParen,
+            TokenType::LeftParen,
+            TokenType::RightParen,
+            TokenType::RightParen,
+            TokenType::LeftBrace,
+            TokenType::RightBrace,
+            TokenType::Bang,
+            TokenType::Star,
+            TokenType::Plus,
+            TokenType::Minus,
+            TokenType::Slash,
+            TokenType::Equal,
+            TokenType::Less,
+            TokenType::Greater,
+            TokenType::LessEqual,
+            TokenType::EqualEqual,
+            TokenType::LeftBrace,
+            TokenType::LeftBrace,
+            TokenType::RightBrace,
+            TokenType::RightBrace,
+            TokenType::String,
+            TokenType::Identifier,
+            TokenType::Number,
+            TokenType::Eof,
+        ];
+
+        assert_eq!(scanner.tokens.len(), expected.len());
+        for (i, token) in scanner.tokens.iter().enumerate() {
+            if token.kind == TokenType::String {
+                assert!(token.clone()
+                    .literal
+                    .unwrap()
+                    .eq(&Literal::String("a string is here".to_string())));
+            }
+            if token.kind == TokenType::Number {
+                assert_eq!(token.clone().literal.unwrap(), Literal::Number(123.123))
+            }
+            assert_eq!(
+                token.clone().kind,
+                expected[i],
+                "Did not find expected {:?}; {:?} was found",
+                expected[i],
+                token.kind
+            );
+        }
+    }
+
+    #[test]
     fn scanner_test() {
         let source = "//this is a comment\n(()){}//grouping stuff\n!*+-/=<><===// operators\n{{}}\"a string is here\"";
         let mut scanner = Scanner::new(source);
