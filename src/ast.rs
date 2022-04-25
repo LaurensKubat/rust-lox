@@ -77,6 +77,8 @@ impl Display for Expression {
     }
 }
 
+// instinctively, we want to replace visitor with an iterator and fold the expression to get the string as we can do in Haskell
+// however this does not sit well with rust, this approach works a bit easier.
 impl Visitor<String> for Expression {
     fn visit(&self) -> String {
         self.to_string()
