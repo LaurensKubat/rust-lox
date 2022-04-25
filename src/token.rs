@@ -1,4 +1,5 @@
 use crate::tokentype::{Literal, TokenType};
+use std::fmt::{Display, Formatter};
 
 #[derive(Clone)]
 pub(crate) struct Token {
@@ -25,12 +26,12 @@ impl Token {
     }
 }
 
-impl ToString for Token {
-    fn to_string(&self) -> String {
+impl Display for Token {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if let Some(literal) = &self.literal {
-            format!("{:?} {} {:?}", self.kind, self.lexeme, literal)
+            write!(f, "{}", literal)
         } else {
-            format!("{:?} {}", self.kind, self.lexeme)
+            write!(f, "{}", self.lexeme)
         }
     }
 }

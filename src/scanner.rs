@@ -2,7 +2,6 @@ use crate::token::Token;
 use crate::tokentype::TokenType::{Eof, Identifier};
 use crate::tokentype::{Literal, TokenType};
 use phf;
-use std::collections::HashMap;
 
 pub(crate) struct Scanner<'a> {
     source: &'a str,
@@ -65,14 +64,15 @@ impl<'a> Scanner<'a> {
             '+' => self.new_token(TokenType::Plus, None),
             ';' => self.new_token(TokenType::Semicolon, None),
             '*' => self.new_token(TokenType::Star, None),
-            '!' =>  {let token_type = if self.peek() == '=' {
-                self.current += 1;
-                TokenType::BangEqual
-            } else {
-                TokenType::Bang
-            };
+            '!' => {
+                let token_type = if self.peek() == '=' {
+                    self.current += 1;
+                    TokenType::BangEqual
+                } else {
+                    TokenType::Bang
+                };
                 self.new_token(token_type, None)
-            },
+            }
             '=' => {
                 let token_type = if self.peek() == '=' {
                     self.current += 1;
@@ -296,7 +296,8 @@ mod tests {
         assert_eq!(scanner.tokens.len(), expected.len());
         for (i, token) in scanner.tokens.iter().enumerate() {
             if token.kind == TokenType::String {
-                assert!(token.clone()
+                assert!(token
+                    .clone()
                     .literal
                     .unwrap()
                     .eq(&Literal::String("a string is here".to_string())));
@@ -348,7 +349,8 @@ mod tests {
         assert_eq!(scanner.tokens.len(), expected.len());
         for (i, token) in scanner.tokens.iter().enumerate() {
             if token.kind == TokenType::String {
-                assert!(token.clone()
+                assert!(token
+                    .clone()
                     .literal
                     .unwrap()
                     .eq(&Literal::String("a string is here".to_string())));
@@ -408,7 +410,8 @@ mod tests {
 
         for (i, token) in scanner.tokens.iter().enumerate() {
             if token.kind == TokenType::String {
-                assert!(token.clone()
+                assert!(token
+                    .clone()
                     .literal
                     .unwrap()
                     .eq(&Literal::String("blablathisisastring".to_string())));
@@ -467,5 +470,4 @@ mod tests {
             scanner.advance();
         }
     }
-
 }
