@@ -3,6 +3,7 @@ use crate::tokentype;
 use crate::tokentype::{Literal, TokenType};
 use std::fmt::{write, Display, Formatter};
 
+#[derive(Debug)]
 pub(crate) enum Expression {
     Assign {
         name: Token,
@@ -129,6 +130,5 @@ mod tests {
         };
 
         assert_eq!(test.visit(), "(* (+ 123 321) (group 234))")
-
     }
 }

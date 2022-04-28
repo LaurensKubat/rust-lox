@@ -10,7 +10,7 @@ pub struct Lox {
 impl Lox {
     pub fn new() -> Lox {
         Lox {
-            interpreter: Interpreter::new(),
+            interpreter: Interpreter::new(vec![]),
             had_error: false,
             had_runtime_error: false,
         }

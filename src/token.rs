@@ -1,7 +1,7 @@
 use crate::tokentype::{Literal, TokenType};
 use std::fmt::{Display, Formatter};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct Token {
     pub(crate) kind: TokenType,
     pub(crate) lexeme: String,
